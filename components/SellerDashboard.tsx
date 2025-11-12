@@ -1,26 +1,56 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import type { FoodItem, Payment } from '../App';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { AuthContext, type FoodItem, type Payment } from '../App';
+import authFetch from '../lib/api/api';
 
 interface SellerDashboardProps {
-  foodItems: FoodItem[];
-  payments: Payment[];
 }
 
-export function SellerDashboard({ foodItems, payments }: SellerDashboardProps) {
-  const totalRevenue = foodItems.reduce((sum, item) => sum + item.price, 0);
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const pendingAmount = totalRevenue - totalPaid;
-  const todayItems = foodItems.filter(
-    (item) => new Date(item.date).toDateString() === new Date().toDateString()
-  ).length;
+export function SellerDashboard({ }: SellerDashboardProps) {
+  const auth = useContext(AuthContext)
+  const [data, setData] = useState()
+  const [foodItems, setFoodItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [foodItemsLoading, setFoodItemsLoading] = useState(true)
+
 
   const stats = [
-    { label: 'Total Revenue', value: `₹${totalRevenue.toFixed(2)}`, color: '#22c55e', bg: '#dcfce7' },
-    { label: 'Amount Paid', value: `₹${totalPaid.toFixed(2)}`, color: '#3b82f6', bg: '#dbeafe' },
-    { label: 'Pending Balance', value: `₹${pendingAmount.toFixed(2)}`, color: '#f97316', bg: '#fed7aa' },
-    { label: 'Items Today', value: todayItems.toString(), color: '#a855f7', bg: '#f3e8ff' },
+    { label: 'Total Revenue', key: 'totalRevenue', color: '#22c55e', bg: '#dcfce7' },
+    { label: 'Amount Paid', key: 'amountPaid', color: '#3b82f6', bg: '#dbeafe' },
+    { label: 'Pending Balance', key: 'pendingBalance', color: '#f97316', bg: '#fed7aa' },
+    { label: 'Items Today', key: 'todayFoodItems', color: '#a855f7', bg: '#f3e8ff' },
   ];
+
+  useEffect(() => {
+    fetchFoodItems()
+    fetchDashboardData()
+  }, [auth.user])
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await authFetch("/dashboard", {
+        method: "GET",
+      });
+      setData(res)
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchFoodItems = async () => {
+    try {
+      const res = await authFetch("/entries", {
+        method: "GET",
+      });
+      setFoodItems(res)
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setFoodItemsLoading(false)
+    }
+  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -30,35 +60,51 @@ export function SellerDashboard({ foodItems, payments }: SellerDashboardProps) {
           <Text style={styles.subtitle}>Track your daily food business</Text>
         </View>
 
-        <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
-            <View key={index} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
+        <>
+          {loading ? (<ActivityIndicator />) : (
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Recent Food Items</Text>
-          {foodItems.length === 0 ? (
-            <Text style={styles.emptyText}>No food items added yet</Text>
-          ) : (
-            <View style={styles.list}>
-              {foodItems.slice(0, 5).map((item) => (
-                <View key={item.id} style={styles.listItem}>
-                  <View>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemDate}>
-                      {new Date(item.date).toLocaleDateString()}
-                    </Text>
+            <View style={styles.statsGrid}>
+              {data && stats.map((stat, index) => {
+                return (
+                  <View key={index} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+                    <Text style={[styles.statValue, { color: stat.color }]}>{data?.[stat.key] || ""}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
                   </View>
-                  <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
-                </View>
-              ))}
+                )
+              })}
             </View>
           )}
-        </View>
+        </>
+
+        <>
+          {foodItemsLoading ? (
+            <ActivityIndicator />
+          ) : (
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Recent Food Items</Text>
+              {foodItems.length === 0 ? (
+                <Text style={styles.emptyText}>No food items added yet</Text>
+              ) : (
+                <View style={styles.list}>
+                  {foodItems?.slice(0, 5).map((item) => (
+                    <View key={item.id} style={styles.listItem}>
+                      <View>
+                        <Text style={styles.itemName}>{item.food_name}</Text>
+                        <Text style={styles.itemDate}>
+                          {new Date(item.date).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <Text style={styles.itemPrice}>₹{item.amount.toFixed(2)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </>
+
+
       </View>
     </ScrollView>
   );
