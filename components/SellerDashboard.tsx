@@ -28,7 +28,7 @@ export function SellerDashboard({ }: SellerDashboardProps) {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await authFetch("/dashboard", {
+      const res = await authFetch("/reports/dashboard", {
         method: "GET",
       });
       setData(res)

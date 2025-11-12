@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const BASE = 'http://10.0.2.2:4000/api'; // change to server IP on device
+const BASE = 'http://10.0.2.2:4000/api/v1'; // change to server IP on device
 
 async function authFetch(path: string, opts: RequestInit = {}) {
   const token = await AsyncStorage.getItem('token');
@@ -14,12 +14,12 @@ async function authFetch(path: string, opts: RequestInit = {}) {
 }
 
 export function login(email: string, password: string) {
-  return fetch(`${BASE}/login`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) })
+  return fetch(`${BASE}/auth/login`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) })
     .then(res=>res.json());
 }
 
 export function register(payload: any) {
-  return fetch(`${BASE}/register`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+  return fetch(`${BASE}/auth/register`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
     .then(res=>res.json());
 }
 

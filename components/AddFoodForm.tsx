@@ -36,7 +36,7 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
 
   const fetchConsumers = async () => {
     try {
-      const res = await authFetch("/consumers", {
+      const res = await authFetch("/user/consumers", {
         method: "GET",
       });
       const options = res?.map((r) => ({label: r.name, value: r.id}))

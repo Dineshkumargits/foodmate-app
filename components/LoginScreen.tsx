@@ -25,14 +25,15 @@ export function LoginScreen() {
   const handleLogin = async () => {
     try {
       const res = await login(email, password);
-      if (res.token) {
-        await AsyncStorage.setItem('token', res.token);
-        await AsyncStorage.setItem('user', JSON.stringify(res.user));
-        auth.signIn({ token: res.token, user: res.user });
+      if (res.access_token) {
+        await AsyncStorage.setItem('token', res.access_token);
+        await AsyncStorage.setItem('user', JSON.stringify(res.data));
+        auth.signIn({ token: res.access_token, user: res.data });
       } else {
         alert(res.error || 'login failed');
       }
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      alert(e.message); }
   };
 
   return (
