@@ -1,24 +1,61 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useContext, useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { AuthContext } from "../App";
+import authFetch from "../lib/api/api";
+import Dropdown from "./ui/dropdown";
 
 interface AddFoodFormProps {
   onAddFood: (food: { name: string; price: number; date: string }) => void;
 }
 
 export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
-  const [foodName, setFoodName] = useState('');
-  const [price, setPrice] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const auth = useContext(AuthContext);
 
-  const handleSubmit = () => {
+  const [foodName, setFoodName] = useState("");
+  const [price, setPrice] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [mealType, setMealType] = useState("Lunch");
+  const [consumer, setConsumer] = useState("");
+  const [consumers, setConsumers] = useState([])
+  const mealOptions = [
+    { label: "Lunch", value: "lunch" },
+    { label: "Dinner", value: "dinner" },
+  ];
+
+  useEffect(() => {
+    fetchConsumers();
+  },[])
+
+  const fetchConsumers = async () => {
+    try {
+      const res = await authFetch("/consumers", {
+        method: "GET",
+      });
+      const options = res?.map((r) => ({label: r.name, value: r.id}))
+      setConsumers(options)
+      setConsumer(options[0])
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  const handleSubmit = async () => {
     if (!foodName.trim() || !price) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     const priceNum = parseFloat(price);
     if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
+      Alert.alert("Error", "Please enter a valid price");
       return;
     }
 
@@ -28,11 +65,24 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       date: date,
     });
 
-    setFoodName('');
-    setPrice('');
-    setDate(new Date().toISOString().split('T')[0]);
-
-    Alert.alert('Success', 'Food item added successfully!');
+    try {
+      await authFetch("/entries", {
+        method: "POST",
+        body: JSON.stringify({
+          consumer_id: Number(auth.user.id),
+          date,
+          meal_type: mealType,
+          food_name: foodName,
+          amount: Number(price),
+        }),
+      });
+      Alert.alert("Success", "Food item added successfully!");
+      setFoodName("");
+      setPrice("");
+      setDate(new Date().toISOString().split("T")[0]);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   return (
@@ -40,11 +90,21 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       <View style={styles.content}>
         <View style={styles.titleSection}>
           <Text style={styles.title}>Add Food Item</Text>
-          <Text style={styles.subtitle}>Add new meals to your menu</Text>
+          <Text style={styles.subtitle}>Add meals to your consumer</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>New Food Item</Text>
+          <Text style={styles.cardTitle}>Today's Food Item</Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Consumer</Text>
+            <Dropdown
+              items={consumers}
+              value={consumer}
+              onChange={setConsumer}
+              placeholder="Select consumer"
+            />
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Food Name</Text>
@@ -54,6 +114,16 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
               placeholderTextColor="#94a3b8"
               value={foodName}
               onChangeText={setFoodName}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Meal Type</Text>
+            <Dropdown
+              items={mealOptions}
+              value={mealType}
+              onChange={setMealType}
+              placeholder="Select meal type"
             />
           </View>
 
@@ -80,16 +150,24 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
             />
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+          >
             <Text style={styles.buttonText}>➕ Add Food Item</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.tipsCard}>
           <Text style={styles.tipsTitle}>Quick Tips:</Text>
-          <Text style={styles.tipText}>• Add food items daily for accurate tracking</Text>
+          <Text style={styles.tipText}>
+            • Add food items daily for accurate tracking
+          </Text>
           <Text style={styles.tipText}>• Set fair prices for your meals</Text>
-          <Text style={styles.tipText}>• Update dates if adding past items</Text>
+          <Text style={styles.tipText}>
+            • Update dates if adding past items
+          </Text>
         </View>
       </View>
     </ScrollView>
@@ -99,7 +177,7 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fdf9',
+    backgroundColor: "#f8fdf9",
   },
   content: {
     padding: 20,
@@ -110,21 +188,21 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748b',
+    fontFamily: "Poppins-Regular",
+    color: "#64748b",
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -132,8 +210,8 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#1a1a1a",
     marginBottom: 20,
   },
   inputGroup: {
@@ -141,53 +219,53 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-Medium",
+    color: "#1a1a1a",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: "rgba(34, 197, 94, 0.2)",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    fontFamily: 'Poppins-Regular',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-Regular",
+    color: "#1a1a1a",
   },
   button: {
-    backgroundColor: '#22c55e',
+    backgroundColor: "#22c55e",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
-    shadowColor: '#22c55e',
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   buttonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: "Poppins-SemiBold",
   },
   tipsCard: {
-    backgroundColor: '#f0fdf4',
+    backgroundColor: "#f0fdf4",
     borderRadius: 16,
     padding: 20,
   },
   tipsTitle: {
     fontSize: 15,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#16a34a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#16a34a",
     marginBottom: 12,
   },
   tipText: {
     fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-    color: '#16a34a',
+    fontFamily: "Poppins-Regular",
+    color: "#16a34a",
     marginBottom: 6,
   },
 });

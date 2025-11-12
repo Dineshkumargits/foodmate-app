@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext } from "react";
 import { StatusBar, Platform, LogBox } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LoginScreen } from "./components/LoginScreen";
 import { SellerDashboard } from "./components/SellerDashboard";
@@ -72,7 +72,6 @@ export default function App() {
         loading: false,
         activeTab: user.role === "seller" ? "dashboard" : "meals",
       });
-      console.log("token===", token);
     })();
   }, []);
 
@@ -191,6 +190,7 @@ export default function App() {
           return <SellerDashboard foodItems={foodItems} payments={payments} />;
       }
     } else {
+      console.log("role====", state.user.role);
       switch (activeTab) {
         case "meals":
           return <ConsumerMeals foodItems={foodItems} />;
@@ -211,26 +211,28 @@ export default function App() {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, ...auth }}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fdf9" }}>
-        {state.user == null ? (
-          <>
-            <StatusBar barStyle="dark-content" backgroundColor="#f8fdf9" />
-            <LoginScreen />
-          </>
-        ) : (
-          <>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-            <Header />
-            {renderContent()}
-            <BottomNav
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              role={userRole}
-            />
-          </>
-        )}
-      </SafeAreaView>
-    </AuthContext.Provider>
+    <SafeAreaProvider>
+      <AuthContext.Provider value={{ ...state, ...auth }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fdf9" }}>
+            {state.user == null ? (
+              <>
+                <StatusBar barStyle="dark-content" backgroundColor="#f8fdf9" />
+                <LoginScreen />
+              </>
+            ) : (
+              <>
+                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+                <Header />
+                {renderContent()}
+                <BottomNav
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  role={userRole}
+                />
+              </>
+            )}
+          </SafeAreaView>
+      </AuthContext.Provider>
+    </SafeAreaProvider>
   );
 }

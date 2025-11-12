@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useContext } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AuthContext } from '../App';
 
 interface BottomNavProps {
   activeTab: string;
@@ -20,8 +21,9 @@ const consumerTabs = [
   { id: 'profile', label: 'Profile', icon: '👤' },
 ];
 
-export function BottomNav({ activeTab, onTabChange, role }: BottomNavProps) {
-  const tabs = role === 'seller' ? sellerTabs : consumerTabs;
+export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const auth = useContext(AuthContext)
+  const tabs = auth.user.role === 'seller' ? sellerTabs : consumerTabs;
 
   return (
     <View style={styles.container}>
