@@ -182,10 +182,10 @@ export default function App() {
           return <AddFoodForm onAddFood={handleAddFood} />;
         case "payments":
           return (
-            <PaymentsList payments={payments} onAddPayment={handleAddPayment} />
+            <PaymentsList />
           );
         case "summary":
-          return <MonthlySummary foodItems={foodItems} payments={payments} />;
+          return <MonthlySummary />;
         default:
           return <SellerDashboard />;
       }

@@ -1,79 +1,160 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import type { FoodItem, Payment } from '../App';
+import authFetch from '../lib/api/api';
+import { formatAmount } from '../lib/utils/amountFormatter';
+import Dropdown from './ui/dropdown';
+import { formatDate } from '../lib/utils/dateFormatter';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface MonthlySummaryProps {
-  foodItems: FoodItem[];
-  payments: Payment[];
 }
 
-export function MonthlySummary({ foodItems, payments }: MonthlySummaryProps) {
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+interface ReportsData {
+  month: string;
+  consumerId: number;
+  totalRevenue: number;
+  totalPaid: number;
+  pendingAmount: number;
+  totalItems: number;
+  avgPerItem: number;
+  collectionRate: number;
+  breakdown: IBreakdown[];
+  stats: IStats[]
+}
 
-  const monthlyFoodItems = foodItems.filter((item) => {
-    const itemDate = new Date(item.date);
-    return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
-  });
+interface IBreakdown {
+  id: number;
+  totalRevenue: string;
+  consumerId: number;
+  consumerName: string;
+}
 
-  const monthlyPayments = payments.filter((payment) => {
-    const paymentDate = new Date(payment.date);
-    return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
-  });
+interface IStats {
+  label: string;
+  value: number;
+  color: string;
+  bg: string;
+  isAmount: boolean
+}
 
-  const totalRevenue = monthlyFoodItems.reduce((sum, item) => sum + item.price, 0);
-  const totalPaid = monthlyPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const pendingAmount = totalRevenue - totalPaid;
-  const totalItems = monthlyFoodItems.length;
+export function MonthlySummary({ }: MonthlySummaryProps) {
 
-  const monthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-  const avgPerItem = totalItems > 0 ? totalRevenue / totalItems : 0;
-  const collectionRate = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0;
+  const [data, setData] = useState<ReportsData>()
+  const [loading, setLoading] = useState(true)
+  const [consumer, setConsumer] = useState("");
+  const [consumers, setConsumers] = useState([]);
+  const [consumerLoading, setConsumerLoading] = useState(true);
+  const [date, setDate] = useState(new Date().toISOString());
+    const [datePickerShow, setDatePickerShow] = useState(false);
 
-  const stats = [
-    { label: 'Total Revenue', value: `₹${totalRevenue.toFixed(2)}`, color: '#22c55e', bg: '#dcfce7' },
-    { label: 'Collected', value: `₹${totalPaid.toFixed(2)}`, color: '#3b82f6', bg: '#dbeafe' },
-    { label: 'Pending', value: `₹${pendingAmount.toFixed(2)}`, color: '#f97316', bg: '#fed7aa' },
-    { label: 'Total Items', value: totalItems.toString(), color: '#a855f7', bg: '#f3e8ff' },
-  ];
+
+  useEffect(() => {
+    fetchStats()
+    fetchConsumers();
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      const res = await authFetch("/reports/seller/monthly-stats?month=November", {
+        method: "GET",
+      });
+      setData(res)
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const fetchConsumers = async () => {
+    try {
+      const res = await authFetch("/user/consumers", {
+        method: "GET",
+      });
+      const options = res?.data?.map((r) => ({ label: r.name, value: r.id }));
+      setConsumers(options);
+      setConsumer(options[0]?.value);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setConsumerLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
         <View style={styles.titleSection}>
-          <Text style={styles.title}>Monthly Summary</Text>
-          <Text style={styles.subtitle}>Overview for {monthName}</Text>
-        </View>
+          <View>
+            <Text style={styles.title}>Monthly Summary</Text>
+            <Text style={styles.subtitle}>Overview for {data?.month}</Text>
+          </View>
+          <View style={{ display: "flex", flexDirection: "row", gap: 2}}>
+            <Dropdown
+              items={consumers}
+              value={consumer}
+              onChange={setConsumer}
+              placeholder="Select consumer"
+              containerStyle={{width: "auto"}}
+            />
+            <View>
 
-        <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
-            <View key={index} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => { setDatePickerShow(true) }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ marginLeft: 12 }}>{formatDate(date)}</Text>
+            </TouchableOpacity>
+            {datePickerShow && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={new Date(date)}
+                mode={"date"}
+                onChange={(date) => {
+                  setDate(new Date(date.nativeEvent.timestamp).toISOString()); setDatePickerShow(false)
+                }}
+              />
+            )}
             </View>
-          ))}
+          </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Monthly Breakdown</Text>
-
-          <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>Average per item</Text>
-            <Text style={styles.breakdownValue}>₹{avgPerItem.toFixed(2)}</Text>
-          </View>
-
-          <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>Collection rate</Text>
-            <View style={[styles.badge, { backgroundColor: collectionRate >= 80 ? '#22c55e' : '#64748b' }]}>
-              <Text style={styles.badgeText}>{Math.round(collectionRate)}%</Text>
+        {loading ? <ActivityIndicator size={"large"} /> : (
+          <>
+            <View style={styles.statsGrid}>
+              {data?.stats.map((stat, index) => (
+                <View key={index} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+                  <Text style={[styles.statValue, { color: stat.color }]}>{stat.isAmount ? formatAmount(stat.value) : stat.value}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
+              ))}
             </View>
-          </View>
 
-          <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>Items this month</Text>
-            <Text style={styles.breakdownValue}>{totalItems} items</Text>
-          </View>
-        </View>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Monthly Breakdown</Text>
+
+              <View style={styles.breakdownItem}>
+                <Text style={styles.breakdownLabel}>Average per item</Text>
+                <Text style={styles.breakdownValue}>{formatAmount(data?.avgPerItem)}</Text>
+              </View>
+
+              <View style={styles.breakdownItem}>
+                <Text style={styles.breakdownLabel}>Collection rate</Text>
+                <View style={[styles.badge, { backgroundColor: data?.collectionRate >= 80 ? '#22c55e' : '#64748b' }]}>
+                  <Text style={styles.badgeText}>{Math.round(data?.collectionRate)}%</Text>
+                </View>
+              </View>
+
+              <View style={styles.breakdownItem}>
+                <Text style={styles.breakdownLabel}>Items this month</Text>
+                <Text style={styles.breakdownValue}>{data?.totalItems} items</Text>
+              </View>
+            </View>
+          </>
+        )}
+
       </View>
     </ScrollView>
   );
@@ -90,6 +171,9 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     marginBottom: 20,
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    gap: 10
   },
   title: {
     fontSize: 28,
@@ -173,5 +257,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Poppins-SemiBold',
     color: '#ffffff',
+  },
+  datePickerButton: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    shadowColor: "#f0fdf4",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    width: 150,
   },
 });

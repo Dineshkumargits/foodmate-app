@@ -9,11 +9,9 @@ import PriceInput from './ui/PriceInput';
 import { formatAmount } from '../lib/utils/amountFormatter';
 
 interface PaymentsListProps {
-  payments: Payment[];
-  onAddPayment: (payment: { consumerName: string; amount: number; date: string }) => void;
 }
 
-export function PaymentsList({ onAddPayment }: PaymentsListProps) {
+export function PaymentsList({  }: PaymentsListProps) {
   const [consumer, setConsumer] = useState("");
   const [consumers, setConsumers] = useState([]);
   const [consumerLoading, setConsumerLoading] = useState(true);
