@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { login } from "../lib/api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,20 +21,25 @@ const { width } = Dimensions.get("window");
 export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const auth = useContext(AuthContext);
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       const res = await login(email, password);
       if (res.access_token) {
-        await AsyncStorage.setItem('token', res.access_token);
-        await AsyncStorage.setItem('user', JSON.stringify(res.data));
+        await AsyncStorage.setItem("token", res.access_token);
+        await AsyncStorage.setItem("user", JSON.stringify(res.data));
         auth.signIn({ token: res.access_token, user: res.data });
       } else {
-        alert(res.error || 'login failed');
+        alert(res.error || "login failed");
       }
-    } catch (e: any) { 
-      alert(e.message); }
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,36 +52,38 @@ export function LoginScreen() {
           </View>
           <View style={styles.tabContent}>
             <View style={styles.roleInfo}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor="#94a3b8"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Password</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#94a3b8"
-                    value={password}
-                    onChangeText={setPassword}
-                    keyboardType="visible-password"
-                  />
-                </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor="#94a3b8"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="#94a3b8"
+                  value={password}
+                  onChangeText={setPassword}
+                  keyboardType="visible-password"
+                />
+              </View>
             </View>
 
             <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
               activeOpacity={0.8}
+              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>Login</Text>
+                {loading ? <ActivityIndicator style={{marginRight: 5}} /> : <></>}
+                <Text style={styles.loginButtonText}>Login</Text>
             </TouchableOpacity>
             <View style={styles.features}>
               <Text style={styles.feature}>✓ View daily meal menu</Text>
@@ -103,7 +111,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 40,
-    marginTop: 24
+    marginTop: 24,
   },
   logo: {
     fontSize: 42,
@@ -204,6 +212,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    justifyContent: "center",
+    flexDirection: 'row',
   },
   loginButtonText: {
     color: "#ffffff",
@@ -212,7 +222,7 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 16,
-    width: "100%"
+    width: "100%",
   },
   label: {
     fontSize: 14,

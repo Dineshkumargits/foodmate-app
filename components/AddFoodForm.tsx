@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
 import { AuthContext } from "../App";
 import authFetch from "../lib/api/api";
 import Dropdown from "./ui/dropdown";
+import PriceInput from "./ui/PriceInput";
 
 interface AddFoodFormProps {
   onAddFood: (food: { name: string; price: number; date: string }) => void;
@@ -20,32 +22,35 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
   const auth = useContext(AuthContext);
 
   const [foodName, setFoodName] = useState("");
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [mealType, setMealType] = useState("Lunch");
   const [consumer, setConsumer] = useState("");
-  const [consumers, setConsumers] = useState([])
+  const [consumers, setConsumers] = useState([]);
+  const [consumerLoading, setConsumerLoading] = useState(true);
   const mealOptions = [
-    { label: "Lunch", value: "lunch" },
-    { label: "Dinner", value: "dinner" },
+    { label: "Lunch", value: "Lunch" },
+    { label: "Dinner", value: "Dinner" },
   ];
 
   useEffect(() => {
     fetchConsumers();
-  },[])
+  }, []);
 
   const fetchConsumers = async () => {
     try {
       const res = await authFetch("/user/consumers", {
         method: "GET",
       });
-      const options = res?.map((r) => ({label: r.name, value: r.id}))
-      setConsumers(options)
-      setConsumer(options[0])
+      const options = res?.data?.map((r) => ({ label: r.name, value: r.id }));
+      setConsumers(options);
+      setConsumer(options[0]?.value);
     } catch (e: any) {
       alert(e.message);
+    } finally {
+      setConsumerLoading(false);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     if (!foodName.trim() || !price) {
@@ -53,7 +58,7 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       return;
     }
 
-    const priceNum = parseFloat(price);
+    const priceNum = parseFloat(String(price));
     if (isNaN(priceNum) || priceNum <= 0) {
       Alert.alert("Error", "Please enter a valid price");
       return;
@@ -69,7 +74,7 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       await authFetch("/entries", {
         method: "POST",
         body: JSON.stringify({
-          consumer_id: Number(auth.user.id),
+          consumer_id: consumer,
           date,
           meal_type: mealType,
           food_name: foodName,
@@ -78,12 +83,16 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       });
       Alert.alert("Success", "Food item added successfully!");
       setFoodName("");
-      setPrice("");
+      setPrice(0);
       setDate(new Date().toISOString().split("T")[0]);
     } catch (e: any) {
       alert(e.message);
     }
   };
+
+  const isDisabled = useMemo(() => {
+    return !foodName || !price || !date || !mealType || !consumer;
+  }, [foodName, price, date, mealType, consumer]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -127,17 +136,7 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Price (₹)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor="#94a3b8"
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-            />
-          </View>
+          <PriceInput value={price} onChange={setPrice} />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Date</Text>
@@ -154,7 +153,11 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
             style={styles.button}
             onPress={handleSubmit}
             activeOpacity={0.8}
+            disabled={isDisabled}
           >
+            {consumerLoading && (
+              <ActivityIndicator style={{ marginRight: 5 }} />
+            )}
             <Text style={styles.buttonText}>➕ Add Food Item</Text>
           </TouchableOpacity>
         </View>
@@ -245,6 +248,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    flexDirection: "row",
+    justifyContent: "center",
   },
   buttonText: {
     color: "#ffffff",

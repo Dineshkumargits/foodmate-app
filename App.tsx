@@ -177,7 +177,7 @@ export default function App() {
     if (state.user.role === "seller") {
       switch (activeTab) {
         case "dashboard":
-          return <SellerDashboard foodItems={foodItems} payments={payments} />;
+          return <SellerDashboard />;
         case "add-food":
           return <AddFoodForm onAddFood={handleAddFood} />;
         case "payments":
@@ -187,7 +187,7 @@ export default function App() {
         case "summary":
           return <MonthlySummary foodItems={foodItems} payments={payments} />;
         default:
-          return <SellerDashboard foodItems={foodItems} payments={payments} />;
+          return <SellerDashboard />;
       }
     } else {
       console.log("role====", state.user.role);
