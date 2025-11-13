@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { AuthContext } from "../App";
 import authFetch from "../lib/api/api";
 import Dropdown from "./ui/dropdown";
 import PriceInput from "./ui/PriceInput";
+import { formatDate } from "../lib/utils/dateFormatter";
 
 interface AddFoodFormProps {
   onAddFood: (food: { name: string; price: number; date: string }) => void;
@@ -23,7 +25,8 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
 
   const [foodName, setFoodName] = useState("");
   const [price, setPrice] = useState(0);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(new Date().toISOString());
+  const [datePickerShow, setDatePickerShow] = useState(false);
   const [mealType, setMealType] = useState("Lunch");
   const [consumer, setConsumer] = useState("");
   const [consumers, setConsumers] = useState([]);
@@ -140,13 +143,22 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={styles.input}
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#94a3b8"
-            />
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => { setDatePickerShow(true) }}
+              activeOpacity={0.8}
+            >
+              <Text style={{marginLeft: 12}}>{formatDate(date)}</Text>
+            </TouchableOpacity>
+            {datePickerShow && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={new Date(date)}
+                mode={"date"}
+                onChange={(date) => {
+                  setDate(new Date(date.nativeEvent.timestamp).toISOString()); setDatePickerShow(false) }}
+              />
+            )}
           </View>
 
           <TouchableOpacity
@@ -250,6 +262,22 @@ const styles = StyleSheet.create({
     elevation: 4,
     flexDirection: "row",
     justifyContent: "center",
+  },
+  datePickerButton: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 8,
+    shadowColor: "#f0fdf4",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
   buttonText: {
     color: "#ffffff",

@@ -190,7 +190,6 @@ export default function App() {
           return <SellerDashboard />;
       }
     } else {
-      console.log("role====", state.user.role);
       switch (activeTab) {
         case "meals":
           return <ConsumerMeals foodItems={foodItems} />;
@@ -210,18 +209,20 @@ export default function App() {
     }
   };
 
+  const bgColor = state.user == null ? "#f8fdf9" : "#ffff"
+
   return (
     <SafeAreaProvider>
       <AuthContext.Provider value={{ ...state, ...auth }}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fdf9" }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
             {state.user == null ? (
               <>
-                <StatusBar barStyle="dark-content" backgroundColor="#f8fdf9" />
+                <StatusBar barStyle="dark-content" backgroundColor={bgColor}/>
                 <LoginScreen />
               </>
             ) : (
               <>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+                <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
                 <Header />
                 {renderContent()}
                 <BottomNav

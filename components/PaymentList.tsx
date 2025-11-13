@@ -1,39 +1,106 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import type { Payment } from '../App';
+import Dropdown from './ui/dropdown';
+import authFetch from '../lib/api/api';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { formatDate } from '../lib/utils/dateFormatter';
+import PriceInput from './ui/PriceInput';
+import { formatAmount } from '../lib/utils/amountFormatter';
 
 interface PaymentsListProps {
   payments: Payment[];
   onAddPayment: (payment: { consumerName: string; amount: number; date: string }) => void;
 }
 
-export function PaymentsList({ payments, onAddPayment }: PaymentsListProps) {
-  const [consumerName, setConsumerName] = useState('');
-  const [amount, setAmount] = useState('');
+export function PaymentsList({ onAddPayment }: PaymentsListProps) {
+  const [consumer, setConsumer] = useState("");
+  const [consumers, setConsumers] = useState([]);
+  const [consumerLoading, setConsumerLoading] = useState(true);
+  const [date, setDate] = useState(new Date().toISOString());
+  const [datePickerShow, setDatePickerShow] = useState(false);
+  const [price, setPrice] = useState(0);
+  const [loading, setLoading] = useState(false)
+  const [payments, setPayments] = useState([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
 
-  const handleSubmit = () => {
-    if (!consumerName.trim() || !amount) {
+  useEffect(() => {
+    fetchConsumers();
+    fetchPayments();
+  }, []);
+
+  const fetchConsumers = async () => {
+    try {
+      const res = await authFetch("/user/consumers", {
+        method: "GET",
+      });
+      const options = res?.data?.map((r) => ({ label: r.name, value: r.id }));
+      setConsumers(options);
+      setConsumer(options[0]?.value);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setConsumerLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    if (!consumer || !price) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    if (isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
 
-    onAddPayment({
-      consumerName: consumerName.trim(),
-      amount: amountNum,
-      date: new Date().toISOString(),
-    });
+    setLoading(false)
 
-    setConsumerName('');
-    setAmount('');
+    try {
+      const res = await authFetch("/payments", {
+        method: "POST",
+        body: JSON.stringify({
+          consumer_id: consumer,
+          date,
+          amount: price,
+        })
+      });
+      fetchPayments();
+      Alert.alert('Success', 'Payment recorded successfully!');
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setConsumerLoading(false);
+      setLoading(false)
+    }
 
-    Alert.alert('Success', 'Payment recorded successfully!');
+    setConsumer('');
+    setPrice(0);
+    setDate(new Date().toISOString())
+
+
   };
+
+  const fetchPayments = async () => {
+    setPaymentsLoading(true)
+    try {
+      const res = await authFetch("/payments", {
+        method: "GET",
+      });
+      setPayments(res)
+      Alert.alert('Success', 'Payment recorded successfully!');
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setPaymentsLoading(false)
+    }
+  }
+
+  const isDisabled = useMemo(() => {
+    return !consumer || !price || !date || loading || consumerLoading;
+  }, [price, date, consumer]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -48,54 +115,75 @@ export function PaymentsList({ payments, onAddPayment }: PaymentsListProps) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Consumer Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., John Doe"
-              placeholderTextColor="#94a3b8"
-              value={consumerName}
-              onChangeText={setConsumerName}
+            <Dropdown
+              items={consumers}
+              value={consumer}
+              onChange={setConsumer}
+              placeholder="Select consumer"
             />
           </View>
+
+          <PriceInput value={price} onChange={setPrice} label='Amount Paid (₹)' />
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount Paid (₹)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor="#94a3b8"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-            />
+            <Text style={styles.label}>Date</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => { setDatePickerShow(true) }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ marginLeft: 12 }}>{formatDate(date)}</Text>
+            </TouchableOpacity>
+            {datePickerShow && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={new Date(date)}
+                mode={"date"}
+                onChange={(date) => {
+                  setDate(new Date(date.nativeEvent.timestamp).toISOString()); setDatePickerShow(false)
+                }}
+              />
+            )}
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8} disabled={isDisabled}>
+            {(consumerLoading || loading) && (
+              <ActivityIndicator style={{ marginRight: 5 }} />
+            )}
             <Text style={styles.buttonText}>✓ Mark as Paid</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Payment History</Text>
-          {payments.length === 0 ? (
-            <Text style={styles.emptyText}>No payments recorded yet</Text>
-          ) : (
-            <View style={styles.list}>
-              {payments.map((payment) => (
-                <View key={payment.id} style={styles.paymentItem}>
-                  <View style={styles.paymentIcon}>
-                    <Text style={styles.iconText}>💵</Text>
+          <>
+            {paymentsLoading ? (
+              <ActivityIndicator size={"large"} />
+            ) : (
+              <>
+                {payments?.length === 0 ? (
+                  <Text style={styles.emptyText}>No payments recorded yet</Text>
+                ) : (
+                  <View style={styles.list}>
+                    {payments?.map((payment) => (
+                      <View key={payment.id} style={styles.paymentItem}>
+                        <View style={styles.paymentIcon}>
+                          <Text style={styles.iconText}>💵</Text>
+                        </View>
+                        <View style={styles.paymentInfo}>
+                          <Text style={styles.paymentName}>{payment?.Consumer?.name || ''}</Text>
+                          <Text style={styles.paymentDate}>
+                            {formatDate(payment.date)}
+                          </Text>
+                        </View>
+                        <Text style={styles.paymentAmount}>{formatAmount(payment.amount)}</Text>
+                      </View>
+                    ))}
                   </View>
-                  <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentName}>{payment.consumerName}</Text>
-                    <Text style={styles.paymentDate}>
-                      {new Date(payment.date).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Text style={styles.paymentAmount}>₹{payment.amount.toFixed(2)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+                )}
+              </>
+            )}
+          </>
         </View>
       </View>
     </ScrollView>
@@ -173,6 +261,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    flexDirection: 'row',
+    justifyContent: "center",
   },
   buttonText: {
     color: '#ffffff',
@@ -226,5 +316,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#16a34a',
+  },
+  datePickerButton: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 8,
+    shadowColor: "#f0fdf4",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
 });

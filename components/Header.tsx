@@ -31,7 +31,7 @@ export function Header({}: HeaderProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: "row",
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    // elevation: 2,
   },
   title: {
     fontSize: 20,

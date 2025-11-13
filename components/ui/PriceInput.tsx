@@ -5,15 +5,16 @@ import CurrencyInput from "react-native-currency-input";
 interface IPriceInput {
   value: number;
   onChange: (value: number) => void;
+  label?: string;
 }
 
 export default function PriceInput(props: IPriceInput) {
-  const { onChange, value } = props;
+  const { onChange, value, label } = props;
 
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>Price (₹)</Text>
+      <Text style={styles.label}>{label || `Price (₹)`}</Text>
       <CurrencyInput
         value={value}
         onChangeValue={(value: number) => {

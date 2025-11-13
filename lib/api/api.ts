@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const BASE = 'http://10.0.2.2:4000/api/v1'; // change to server IP on device
+import Constants from 'expo-constants';
+const BASE = Constants.expoConfig.extra.apiUrl || "http://192.168.1.121:4000/api/v1"; // change to server IP on device
 
 async function authFetch(path: string, opts: RequestInit = {}) {
   const token = await AsyncStorage.getItem('token');
