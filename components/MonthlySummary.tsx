@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
-import type { FoodItem, Payment } from '../App';
-import authFetch from '../lib/api/api';
-import { formatAmount } from '../lib/utils/amountFormatter';
-import Dropdown from './ui/dropdown';
-import { formatDate } from '../lib/utils/dateFormatter';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import authFetch from "../lib/api/api";
+import { formatAmount } from "../lib/utils/amountFormatter";
+import Dropdown from "./ui/dropdown";
 
-interface MonthlySummaryProps {
-}
+interface MonthlySummaryProps {}
 
 interface ReportsData {
   month: string;
@@ -20,7 +22,7 @@ interface ReportsData {
   avgPerItem: number;
   collectionRate: number;
   breakdown: IBreakdown[];
-  stats: IStats[]
+  stats: IStats[];
 }
 
 interface IBreakdown {
@@ -35,37 +37,52 @@ interface IStats {
   value: number;
   color: string;
   bg: string;
-  isAmount: boolean
+  isAmount: boolean;
 }
 
-export function MonthlySummary({ }: MonthlySummaryProps) {
+const MONTHS = [
+  {label: "January", value: "January"},
+  {label: "February", value: "February"},
+  {label: "March", value: "March"},
+  {label: "April", value: "April"},
+  {label: "May", value: "May"},
+  {label: "June", value: "June"},
+  {label: "July", value: "July"},
+  {label: "August", value: "August"},
+  {label: "September", value: "September"},
+  {label: "October", value: "October"},
+  {label: "November", value: "November"},
+  {label: "December", value: "December"},
+];
 
-  const [data, setData] = useState<ReportsData>()
-  const [loading, setLoading] = useState(true)
+export function MonthlySummary({}: MonthlySummaryProps) {
+  const [data, setData] = useState<ReportsData>();
+  const [loading, setLoading] = useState(true);
   const [consumer, setConsumer] = useState("");
   const [consumers, setConsumers] = useState([]);
   const [consumerLoading, setConsumerLoading] = useState(true);
-  const [date, setDate] = useState(new Date().toISOString());
-    const [datePickerShow, setDatePickerShow] = useState(false);
-
+  const [month, setMonth] = useState(MONTHS[new Date().getMonth()].value);
 
   useEffect(() => {
-    fetchStats()
+    fetchStats();
     fetchConsumers();
-  }, [])
+  }, [month]);
 
   const fetchStats = async () => {
     try {
-      const res = await authFetch("/reports/seller/monthly-stats?month=November", {
-        method: "GET",
-      });
-      setData(res)
+      const res = await authFetch(
+        `/reports/seller/monthly-stats?month=${month}`,
+        {
+          method: "GET",
+        }
+      );
+      setData(res);
     } catch (e: any) {
       alert(e.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const fetchConsumers = async () => {
     try {
@@ -90,43 +107,43 @@ export function MonthlySummary({ }: MonthlySummaryProps) {
             <Text style={styles.title}>Monthly Summary</Text>
             <Text style={styles.subtitle}>Overview for {data?.month}</Text>
           </View>
-          <View style={{ display: "flex", flexDirection: "row", gap: 2}}>
-            <Dropdown
-              items={consumers}
-              value={consumer}
-              onChange={setConsumer}
-              placeholder="Select consumer"
-              containerStyle={{width: "auto"}}
-            />
-            <View>
-
-            <TouchableOpacity
-              style={styles.datePickerButton}
-              onPress={() => { setDatePickerShow(true) }}
-              activeOpacity={0.8}
-            >
-              <Text style={{ marginLeft: 12 }}>{formatDate(date)}</Text>
-            </TouchableOpacity>
-            {datePickerShow && (
-              <DateTimePicker
-                testID="dateTimePicker"
-                value={new Date(date)}
-                mode={"date"}
-                onChange={(date) => {
-                  setDate(new Date(date.nativeEvent.timestamp).toISOString()); setDatePickerShow(false)
-                }}
+          <View style={{ flexDirection: "row", gap: 5, width: "100%" }}>
+            <View style={{ width: "50%" }}>
+              {consumerLoading ? (
+                <ActivityIndicator size={"small"} />
+              ) : (
+                <Dropdown
+                  items={consumers}
+                  value={consumer}
+                  onChange={setConsumer}
+                  placeholder="Select consumer"
+                />
+              )}
+            </View>
+            <View style={{ width: "50%" }}>
+              <Dropdown
+                items={MONTHS}
+                value={month}
+                onChange={setMonth}
+                placeholder="Select Month"
               />
-            )}
             </View>
           </View>
         </View>
 
-        {loading ? <ActivityIndicator size={"large"} /> : (
+        {loading ? (
+          <ActivityIndicator size={"large"} />
+        ) : (
           <>
             <View style={styles.statsGrid}>
               {data?.stats.map((stat, index) => (
-                <View key={index} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-                  <Text style={[styles.statValue, { color: stat.color }]}>{stat.isAmount ? formatAmount(stat.value) : stat.value}</Text>
+                <View
+                  key={index}
+                  style={[styles.statCard, { backgroundColor: stat.bg }]}
+                >
+                  <Text style={[styles.statValue, { color: stat.color }]}>
+                    {stat.isAmount ? formatAmount(stat.value) : stat.value}
+                  </Text>
                   <Text style={styles.statLabel}>{stat.label}</Text>
                 </View>
               ))}
@@ -137,24 +154,37 @@ export function MonthlySummary({ }: MonthlySummaryProps) {
 
               <View style={styles.breakdownItem}>
                 <Text style={styles.breakdownLabel}>Average per item</Text>
-                <Text style={styles.breakdownValue}>{formatAmount(data?.avgPerItem)}</Text>
+                <Text style={styles.breakdownValue}>
+                  {formatAmount(data?.avgPerItem)}
+                </Text>
               </View>
 
               <View style={styles.breakdownItem}>
                 <Text style={styles.breakdownLabel}>Collection rate</Text>
-                <View style={[styles.badge, { backgroundColor: data?.collectionRate >= 80 ? '#22c55e' : '#64748b' }]}>
-                  <Text style={styles.badgeText}>{Math.round(data?.collectionRate)}%</Text>
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor:
+                        data?.collectionRate >= 80 ? "#22c55e" : "#64748b",
+                    },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>
+                    {Math.round(data?.collectionRate)}%
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.breakdownItem}>
                 <Text style={styles.breakdownLabel}>Items this month</Text>
-                <Text style={styles.breakdownValue}>{data?.totalItems} items</Text>
+                <Text style={styles.breakdownValue}>
+                  {data?.totalItems} items
+                </Text>
               </View>
             </View>
           </>
         )}
-
       </View>
     </ScrollView>
   );
@@ -163,7 +193,7 @@ export function MonthlySummary({ }: MonthlySummaryProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fdf9',
+    backgroundColor: "#f8fdf9",
   },
   content: {
     padding: 20,
@@ -173,30 +203,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     flexWrap: "wrap",
     alignItems: "flex-start",
-    gap: 10
+    gap: 10,
   },
   title: {
     fontSize: 28,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748b',
+    fontFamily: "Poppins-Regular",
+    color: "#64748b",
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 20,
   },
   statCard: {
-    width: '48%',
+    width: "48%",
     padding: 16,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -204,19 +234,19 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: "Poppins-SemiBold",
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 11,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748b',
+    fontFamily: "Poppins-Regular",
+    color: "#64748b",
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -224,29 +254,29 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#1a1a1a",
     marginBottom: 16,
   },
   breakdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: "#f0fdf4",
     borderRadius: 12,
     marginBottom: 10,
   },
   breakdownLabel: {
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-Regular",
+    color: "#1a1a1a",
   },
   breakdownValue: {
     fontSize: 15,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
+    fontFamily: "Poppins-SemiBold",
+    color: "#1a1a1a",
   },
   badge: {
     paddingHorizontal: 12,
@@ -255,8 +285,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 13,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#ffffff',
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
   },
   datePickerButton: {
     backgroundColor: "#ffffff",
@@ -272,6 +302,5 @@ const styles = StyleSheet.create({
     elevation: 4,
     flexDirection: "row",
     justifyContent: "flex-start",
-    width: 150,
   },
 });

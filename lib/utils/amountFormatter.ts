@@ -26,7 +26,6 @@ export const formatAmount = (
   if (value === null || value === undefined || value === '') return '₹0';
   const num = Number(value);
   if (isNaN(num)) return '₹0';
-  console.log('num===', num)
 
   try {
     const formatter = new Intl.NumberFormat(locale, {

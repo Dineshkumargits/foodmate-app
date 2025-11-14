@@ -65,8 +65,10 @@ export function PaymentsList({  }: PaymentsListProps) {
           amount: price,
         })
       });
-      fetchPayments();
-      Alert.alert('Success', 'Payment recorded successfully!');
+      if(res){
+        fetchPayments();
+        Alert.alert('Success', 'Payment recorded successfully!');
+      }
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -88,7 +90,6 @@ export function PaymentsList({  }: PaymentsListProps) {
         method: "GET",
       });
       setPayments(res)
-      Alert.alert('Success', 'Payment recorded successfully!');
     } catch (e: any) {
       alert(e.message);
     } finally {

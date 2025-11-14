@@ -25,7 +25,7 @@ export default function Dropdown({
         setValue={(cb) => onChange && onChange(cb(value))}
         setItems={() => {}}
         placeholder={placeholder}
-        listMode="SCROLLVIEW"
+        listMode="FLATLIST"
         style={[styles.dropdown, style]}
         dropDownContainerStyle={[
           styles.dropdownContainer,
@@ -35,7 +35,7 @@ export default function Dropdown({
         labelStyle={styles.label}
         dropDownDirection="AUTO"
         closeAfterSelecting={true}
-        maxHeight={150} // fit to content, not full screen
+        maxHeight={500}
       />
     </View>
   );
