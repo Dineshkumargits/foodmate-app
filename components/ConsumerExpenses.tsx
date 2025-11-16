@@ -1,19 +1,54 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import type { FoodItem, Payment } from '../App';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import authFetch from '../lib/api/api';
+import { formatAmount } from '../lib/utils/amountFormatter';
+import { formatDate } from '../lib/utils/dateFormatter';
+import { IFoodEntries } from './ConsumerMeals';
 
-interface ConsumerExpensesProps {
-  foodItems: FoodItem[];
-  payments: Payment[];
-  consumerName: string;
+interface IPayments {
+  id: number
+  amount: string;
+  date: string;
 }
 
-export function ConsumerExpenses({ foodItems, payments, consumerName }: ConsumerExpensesProps) {
-  const totalSpent = foodItems.reduce((sum, item) => sum + item.price, 0);
-  const myPayments = payments.filter(
-    (payment) => payment.consumerName.toLowerCase() === consumerName.toLowerCase()
-  );
-  const totalPaid = myPayments.reduce((sum, payment) => sum + payment.amount, 0);
+interface ConsumerExpensesProps {
+  foodItems: IFoodEntries[];
+  payments: IPayments[];
+}
+
+export const ConsumerExpenses = () => {
+  const [data, setData] = useState<{foodItems: IFoodEntries[], payments: IPayments[]}>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  },[])
+
+  const fetchData = async () => {
+    try {
+      const res = await authFetch(`/my/data`, {
+        method: "GET",
+      });
+      setData(res);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return loading ? (
+    <ActivityIndicator size={"large"}/>
+  ) : (
+    <ConsumerExpensesHelper foodItems={data?.foodItems} payments={data?.payments}/>
+  )
+
+}
+
+export function ConsumerExpensesHelper({ foodItems, payments }: ConsumerExpensesProps) {
+  const totalSpent = foodItems.reduce((sum, item) => sum + Number(item.amount), 0);
+
+  const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
   const pendingBalance = totalSpent - totalPaid;
   const paymentPercentage = totalSpent > 0 ? (totalPaid / totalSpent) * 100 : 0;
 
@@ -26,7 +61,7 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
     return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
   });
 
-  const monthlySpent = monthlyItems.reduce((sum, item) => sum + item.price, 0);
+  const monthlySpent = monthlyItems.reduce((sum, item) => sum + Number(item.amount), 0);
   const avgPerMeal = monthlyItems.length > 0 ? monthlySpent / monthlyItems.length : 0;
 
   return (
@@ -44,7 +79,7 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
               <View style={styles.statInfo}>
                 <Text style={styles.statLabel}>Total Spent</Text>
                 <Text style={[styles.statValue, { color: '#22c55e' }]}>
-                  ₹{totalSpent.toFixed(2)}
+                  {formatAmount(totalSpent)}
                 </Text>
               </View>
             </View>
@@ -56,7 +91,7 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
               <View style={styles.statInfo}>
                 <Text style={styles.statLabel}>Amount Paid</Text>
                 <Text style={[styles.statValue, { color: '#3b82f6' }]}>
-                  ₹{totalPaid.toFixed(2)}
+                  {formatAmount(totalPaid)}
                 </Text>
               </View>
             </View>
@@ -68,7 +103,7 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
               <View style={styles.statInfo}>
                 <Text style={styles.statLabel}>Pending Balance</Text>
                 <Text style={[styles.statValue, { color: '#f97316' }]}>
-                  ₹{pendingBalance.toFixed(2)}
+                  {formatAmount(pendingBalance)}
                 </Text>
               </View>
             </View>
@@ -84,7 +119,7 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
             <Text style={styles.progressText}>{paymentPercentage.toFixed(0)}%</Text>
           </View>
           <Text style={styles.progressSubtext}>
-            You've paid ₹{totalPaid.toFixed(2)} out of ₹{totalSpent.toFixed(2)}
+            You've paid {formatAmount(totalPaid)} out of {formatAmount(totalSpent)}
           </Text>
         </View>
 
@@ -96,12 +131,12 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
               <Text style={styles.monthlyEmoji}>📅</Text>
               <Text style={styles.monthlyText}>Monthly Spending</Text>
             </View>
-            <Text style={styles.monthlyValue}>₹{monthlySpent.toFixed(2)}</Text>
+            <Text style={styles.monthlyValue}>{formatAmount(monthlySpent)}</Text>
           </View>
 
           <View style={styles.monthlyItem}>
             <Text style={styles.monthlyText}>Average per meal</Text>
-            <Text style={styles.monthlyValue}>₹{avgPerMeal.toFixed(2)}</Text>
+            <Text style={styles.monthlyValue}>{formatAmount(avgPerMeal)}</Text>
           </View>
 
           <View style={styles.monthlyItem}>
@@ -110,19 +145,19 @@ export function ConsumerExpenses({ foodItems, payments, consumerName }: Consumer
           </View>
         </View>
 
-        {myPayments.length > 0 && (
+        {payments.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Payment History</Text>
             <View style={styles.paymentsList}>
-              {myPayments.map((payment) => (
+              {payments.map((payment) => (
                 <View key={payment.id} style={styles.paymentItem}>
                   <View>
                     <Text style={styles.paymentTitle}>Payment Received</Text>
                     <Text style={styles.paymentDate}>
-                      {new Date(payment.date).toLocaleDateString()}
+                      {formatDate(payment.date)}
                     </Text>
                   </View>
-                  <Text style={styles.paymentAmount}>₹{payment.amount.toFixed(2)}</Text>
+                  <Text style={styles.paymentAmount}>{formatAmount(payment.amount)}</Text>
                 </View>
               ))}
             </View>

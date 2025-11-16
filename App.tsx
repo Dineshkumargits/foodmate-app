@@ -12,6 +12,7 @@ import { ConsumerExpenses } from "./components/ConsumerExpenses";
 import { ConsumerProfile } from "./components/ConsumerProfile";
 import { BottomNav } from "./components/BottomNav";
 import { Header } from "./components/Header";
+import { ConsumersList } from "./components/ConsumersList";
 
 type User = {
   id: number;
@@ -96,6 +97,13 @@ export default function App() {
         activeTab: "dashboard",
       });
     },
+    updateUser: async (user: any) => {
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      setState({
+        ...state,
+        user: user,
+      });
+    },
   };
 
   LogBox.ignoreAllLogs(true);
@@ -153,21 +161,6 @@ export default function App() {
     }
   }, [consumerName, loading]);
 
-  const handleAddFood = (food: Omit<FoodItem, "id">) => {
-    const newFood: FoodItem = {
-      id: Date.now().toString(),
-      ...food,
-    };
-    setFoodItems([newFood, ...foodItems]);
-  };
-
-  const handleAddPayment = (payment: Omit<Payment, "id">) => {
-    const newPayment: Payment = {
-      id: Date.now().toString(),
-      ...payment,
-    };
-    setPayments([newPayment, ...payments]);
-  };
 
   if (loading) {
     return null;
@@ -179,60 +172,54 @@ export default function App() {
         case "dashboard":
           return <SellerDashboard />;
         case "add-food":
-          return <AddFoodForm onAddFood={handleAddFood} />;
+          return <AddFoodForm />;
         case "payments":
-          return (
-            <PaymentsList />
-          );
+          return <PaymentsList />;
         case "summary":
           return <MonthlySummary />;
+          case "consumers":
+          return <ConsumersList />;
         default:
           return <SellerDashboard />;
       }
     } else {
       switch (activeTab) {
         case "meals":
-          return <ConsumerMeals foodItems={foodItems} />;
+          return <ConsumerMeals />;
         case "expenses":
-          return (
-            <ConsumerExpenses
-              foodItems={foodItems}
-              payments={payments}
-              consumerName={consumerName}
-            />
-          );
+          return <ConsumerExpenses />;
         case "profile":
           return <ConsumerProfile />;
         default:
-          return <ConsumerMeals foodItems={foodItems} />;
+          return <ConsumerMeals />;
       }
     }
   };
 
-  const bgColor = state.user == null ? "#f8fdf9" : "#ffff"
+  const bgColor = state.user == null ? "#f8fdf9" : "#ffff";
 
   return (
     <SafeAreaProvider>
       <AuthContext.Provider value={{ ...state, ...auth }}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
-            {state.user == null ? (
-              <>
-                <StatusBar barStyle="dark-content" backgroundColor={bgColor}/>
-                <LoginScreen />
-              </>
-            ) : (
-              <>
-                <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
-                <Header />
-                {renderContent()}
-                <BottomNav
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  role={userRole}
-                />
-              </>
-            )}
-          </SafeAreaView>
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+          {state.user == null ? (
+            <>
+              <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
+              <LoginScreen />
+            </>
+          ) : (
+            <>
+              <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
+              <Header />
+              {renderContent()}
+              <BottomNav
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                role={userRole}
+              />
+            </>
+          )}
+        </SafeAreaView>
       </AuthContext.Provider>
     </SafeAreaProvider>
   );

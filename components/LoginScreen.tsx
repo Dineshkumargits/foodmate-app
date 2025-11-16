@@ -22,6 +22,7 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [secure, setSecure] = useState(true);
   const auth = useContext(AuthContext);
 
   const handleLogin = async () => {
@@ -61,18 +62,31 @@ export function LoginScreen() {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
                 />
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#94a3b8"
-                  value={password}
-                  onChangeText={setPassword}
-                  keyboardType="visible-password"
-                />
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#94a3b8"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={secure}
+                    autoCapitalize="none"
+                  />
+
+                  <TouchableOpacity
+                    style={styles.showHideButton}
+                    onPress={() => setSecure(!secure)}
+                  >
+                    <Text style={styles.showHideText}>
+                      {secure ? "Show" : "Hide"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -82,8 +96,12 @@ export function LoginScreen() {
               activeOpacity={0.8}
               disabled={loading}
             >
-                {loading ? <ActivityIndicator style={{marginRight: 5}} /> : <></>}
-                <Text style={styles.loginButtonText}>Login</Text>
+              {loading ? (
+                <ActivityIndicator style={{ marginRight: 5 }} />
+              ) : (
+                <></>
+              )}
+              <Text style={styles.loginButtonText}>Login</Text>
             </TouchableOpacity>
             <View style={styles.features}>
               <Text style={styles.feature}>✓ View daily meal menu</Text>
@@ -213,7 +231,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     justifyContent: "center",
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   loginButtonText: {
     color: "#ffffff",
@@ -240,5 +258,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Poppins-Regular",
     color: "#1a1a1a",
+    paddingRight: 60,
+  },
+  inputWrapper: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  showHideButton: {
+    position: "absolute",
+    right: 16,
+    height: "100%",
+    justifyContent: "center",
+  },
+
+  showHideText: {
+    fontSize: 14,
+    color: "#64748b",
+    fontFamily: "Poppins-Regular",
   },
 });

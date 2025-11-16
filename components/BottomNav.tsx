@@ -13,6 +13,7 @@ const sellerTabs = [
   { id: 'add-food', label: 'Add Food', icon: '➕' },
   { id: 'payments', label: 'Payments', icon: '💵' },
   { id: 'summary', label: 'Summary', icon: '📊' },
+  { id: 'consumers', label: 'Consumers', icon: '👥' },
 ];
 
 const consumerTabs = [

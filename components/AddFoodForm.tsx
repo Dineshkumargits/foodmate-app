@@ -9,18 +9,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { AuthContext } from "../App";
 import authFetch from "../lib/api/api";
 import Dropdown from "./ui/dropdown";
 import PriceInput from "./ui/PriceInput";
 import { formatDate } from "../lib/utils/dateFormatter";
 
-interface AddFoodFormProps {
-  onAddFood: (food: { name: string; price: number; date: string }) => void;
-}
+interface AddFoodFormProps {}
 
-export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
+export function AddFoodForm({}: AddFoodFormProps) {
   const auth = useContext(AuthContext);
 
   const [foodName, setFoodName] = useState("");
@@ -39,6 +37,14 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
   useEffect(() => {
     fetchConsumers();
   }, []);
+
+  useEffect(() => {
+    if(mealType === "Lunch") {
+      setPrice(100);
+    } else {
+      setPrice(50);
+    }
+  },[mealType])
 
   const fetchConsumers = async () => {
     try {
@@ -66,12 +72,6 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
       Alert.alert("Error", "Please enter a valid price");
       return;
     }
-
-    onAddFood({
-      name: foodName.trim(),
-      price: priceNum,
-      date: date,
-    });
 
     try {
       await authFetch("/entries", {
@@ -145,10 +145,12 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
             <Text style={styles.label}>Date</Text>
             <TouchableOpacity
               style={styles.datePickerButton}
-              onPress={() => { setDatePickerShow(true) }}
+              onPress={() => {
+                setDatePickerShow(true);
+              }}
               activeOpacity={0.8}
             >
-              <Text style={{marginLeft: 12}}>{formatDate(date)}</Text>
+              <Text style={{ marginLeft: 12 }}>{formatDate(date)}</Text>
             </TouchableOpacity>
             {datePickerShow && (
               <DateTimePicker
@@ -156,7 +158,9 @@ export function AddFoodForm({ onAddFood }: AddFoodFormProps) {
                 value={new Date(date)}
                 mode={"date"}
                 onChange={(date) => {
-                  setDate(new Date(date.nativeEvent.timestamp).toISOString()); setDatePickerShow(false) }}
+                  setDate(new Date(date.nativeEvent.timestamp).toISOString());
+                  setDatePickerShow(false);
+                }}
               />
             )}
           </View>

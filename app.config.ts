@@ -14,6 +14,16 @@ export default {
     },
     android: {
       package: "com.cindy.foodmate",
+      usesCleartextTraffic: true,
+      adaptiveIcon: {
+        foregroundImage: "./assets/icon.png",
+        backgroundColor: "#FFFFFF",
+      },
+    },
+    splash: {
+      image: "./assets/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff",
     },
   },
 };
