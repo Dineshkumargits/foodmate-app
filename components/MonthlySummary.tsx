@@ -64,14 +64,17 @@ export function MonthlySummary({}: MonthlySummaryProps) {
   const [month, setMonth] = useState(MONTHS[new Date().getMonth()].value);
 
   useEffect(() => {
-    fetchStats();
     fetchConsumers();
-  }, [month]);
+  },[])
+
+  useEffect(() => {
+    fetchStats();
+  }, [month, consumer]);
 
   const fetchStats = async () => {
     try {
       const res = await authFetch(
-        `/reports/seller/monthly-stats?month=${month}`,
+        `/reports/seller/monthly-stats?month=${month}&consumerId=${consumer}`,
         {
           method: "GET",
         }

@@ -39,12 +39,12 @@ export function AddFoodForm({}: AddFoodFormProps) {
   }, []);
 
   useEffect(() => {
-    if(mealType === "Lunch") {
+    if (mealType === "Lunch") {
       setPrice(100);
     } else {
       setPrice(50);
     }
-  },[mealType])
+  }, [mealType]);
 
   const fetchConsumers = async () => {
     try {
@@ -74,7 +74,7 @@ export function AddFoodForm({}: AddFoodFormProps) {
     }
 
     try {
-      await authFetch("/entries", {
+      const response = await authFetch("/entries", {
         method: "POST",
         body: JSON.stringify({
           consumer_id: consumer,
@@ -84,10 +84,31 @@ export function AddFoodForm({}: AddFoodFormProps) {
           amount: Number(price),
         }),
       });
-      Alert.alert("Success", "Food item added successfully!");
-      setFoodName("");
-      setPrice(0);
-      setDate(new Date().toISOString().split("T")[0]);
+
+      if (response) {
+        // Send push notification to consumer
+        try {
+          await authFetch("/notifications/meal-added", {
+            method: "POST",
+            body: JSON.stringify({
+              consumer_id: consumer,
+              food_name: foodName,
+              amount: Number(price),
+              meal_type: mealType,
+              date: date,
+            }),
+          });
+          console.log("Notification sent to consumer");
+        } catch (notifError) {
+          console.error("Failed to send notification:", notifError);
+          // Don't block the main flow if notification fails
+        }
+
+        Alert.alert("Success", "Food item added successfully!");
+        setFoodName("");
+        setPrice(0);
+        setDate(new Date().toISOString().split("T")[0]);
+      }
     } catch (e: any) {
       alert(e.message);
     }

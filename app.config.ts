@@ -5,6 +5,7 @@ export default {
     name: "Foodmate",
     slug: "foodmate",
     version: "1.0.0",
+    plugins: ["expo-notifications"],
     extra: {
       apiUrl: process.env.API_BASE_URL,
       env: process.env.APP_ENV || "development",
@@ -18,6 +19,14 @@ export default {
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",
         backgroundColor: "#FFFFFF",
+      },
+      useNextNotificationsApi: true,
+    },
+    ios: {
+      bundleIdentifier: "com.cindy.foodmate",
+      infoPlist: {
+        NSUserNotificationUsageDescription:
+          "Allow notifications to receive alerts",
       },
     },
     splash: {

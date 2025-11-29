@@ -1,7 +1,8 @@
-import React, { useState, useEffect, createContext } from "react";
-import { StatusBar, Platform, LogBox } from "react-native";
+import React, { useState, useEffect, createContext, useRef } from "react";
+import { StatusBar, Platform, LogBox, AppState } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { LoginScreen } from "./components/LoginScreen";
 import { SellerDashboard } from "./components/SellerDashboard";
 import { AddFoodForm } from "./components/AddFoodForm";
@@ -13,12 +14,19 @@ import { ConsumerProfile } from "./components/ConsumerProfile";
 import { BottomNav } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { ConsumersList } from "./components/ConsumersList";
+import {
+  registerForPushToken,
+  setupNotificationListeners,
+  verifyPushToken,
+} from "./lib/notification";
+import Constants from "expo-constants";
 
 type User = {
   id: number;
   name: string;
   email: string;
   role: "seller" | "consumer";
+  push_token: string | null;
 } | null;
 
 export interface FoodItem {
@@ -63,6 +71,8 @@ export default function App() {
     activeTab: string;
   }>({ user: null, token: null, loading: true, activeTab: "dashboard" });
 
+  const appState = useRef(AppState.currentState);
+
   useEffect(() => {
     (async () => {
       const token = await AsyncStorage.getItem("token");
@@ -71,20 +81,85 @@ export default function App() {
         user,
         token,
         loading: false,
-        activeTab: user.role === "seller" ? "dashboard" : "meals",
+        activeTab: user?.role === "seller" ? "dashboard" : "meals",
       });
+
+      // Register for push notifications on app load
+      if (user) {
+        const pushToken = await registerForPushToken();
+        if (pushToken && pushToken !== user.push_token) {
+          const updatedUser = { ...user, push_token: pushToken };
+          await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+          setState((prev) => ({ ...prev, user: updatedUser }));
+        }
+      }
     })();
   }, []);
+
+  // Monitor app state changes to verify token when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active" &&
+          state.user
+        ) {
+          if (Constants.executionEnvironment === "storeClient") {
+            console.log(
+              "Foreground: Expo Go environment, remote push verify skipped."
+            );
+          } else {
+            await verifyPushToken();
+          }
+        }
+        appState.current = nextAppState;
+      }
+    );
+    return () => subscription.remove();
+  }, [state.user]);
+
+  // Setup notification listeners
+  useEffect(() => {
+    if (!state.user) return;
+
+    const cleanup = setupNotificationListeners(
+      (notification) => {
+        console.log("Notification received:", notification);
+        if (notification.request.content.data?.type === "meal_added") {
+          setActiveTab("meals");
+        }
+      },
+      (response) => {
+        console.log("Notification clicked:", response);
+        if (response.notification.request.content.data?.type === "meal_added") {
+          setActiveTab("meals");
+        }
+      }
+    );
+
+    return cleanup;
+  }, [state.user]);
 
   const auth = {
     signIn: async (data: any) => {
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      // Always refresh push token on sign in
+      let userData = data.user;
+      const pushToken = await registerForPushToken(true); // Force refresh
+      if (pushToken) {
+        userData = { ...userData, push_token: pushToken };
+        await AsyncStorage.setItem("user", JSON.stringify(userData));
+      }
+
       setState({
-        user: data.user,
+        user: userData,
         token: data.token,
         loading: false,
-        activeTab: data.user.role === "seller" ? "dashboard" : "meals",
+        activeTab: userData.role === "seller" ? "dashboard" : "meals",
       });
     },
     signOut: async () => {
@@ -108,13 +183,11 @@ export default function App() {
 
   LogBox.ignoreAllLogs(true);
 
-  // OR ignore specific ones
   LogBox.ignoreLogs([
     "Require cycle:",
     "Warning: Each child should have a unique key",
   ]);
 
-  // Load data from AsyncStorage
   useEffect(() => {
     loadData();
   }, []);
@@ -142,7 +215,6 @@ export default function App() {
     }
   };
 
-  // Save to AsyncStorage
   useEffect(() => {
     if (!loading) {
       AsyncStorage.setItem("foodItems", JSON.stringify(foodItems));
@@ -161,7 +233,6 @@ export default function App() {
     }
   }, [consumerName, loading]);
 
-
   if (loading) {
     return null;
   }
@@ -177,7 +248,7 @@ export default function App() {
           return <PaymentsList />;
         case "summary":
           return <MonthlySummary />;
-          case "consumers":
+        case "consumers":
           return <ConsumersList />;
         default:
           return <SellerDashboard />;
