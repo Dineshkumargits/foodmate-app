@@ -86,24 +86,6 @@ export function AddFoodForm({}: AddFoodFormProps) {
       });
 
       if (response) {
-        // Send push notification to consumer
-        try {
-          await authFetch("/notifications/meal-added", {
-            method: "POST",
-            body: JSON.stringify({
-              consumer_id: consumer,
-              food_name: foodName,
-              amount: Number(price),
-              meal_type: mealType,
-              date: date,
-            }),
-          });
-          console.log("Notification sent to consumer");
-        } catch (notifError) {
-          console.error("Failed to send notification:", notifError);
-          // Don't block the main flow if notification fails
-        }
-
         Alert.alert("Success", "Food item added successfully!");
         setFoodName("");
         setPrice(0);

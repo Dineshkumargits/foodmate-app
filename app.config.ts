@@ -21,6 +21,7 @@ export default {
         backgroundColor: "#FFFFFF",
       },
       useNextNotificationsApi: true,
+      googleServicesFile: "./google-services.json",
     },
     ios: {
       bundleIdentifier: "com.cindy.foodmate",

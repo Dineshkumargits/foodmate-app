@@ -5,20 +5,42 @@ import authFetch from "./api/api";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-// Configure notification handler
+// Configure notification handler for high priority
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
     shouldShowBanner: true,
     shouldShowList: true,
+    priority: Notifications.AndroidNotificationPriority.MAX,
   }),
 });
 
+// Create high-priority notification channel for Android
+async function setupNotificationChannel() {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("meal-alerts", {
+      name: "Meal Alerts",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+      sound: "default",
+      enableVibrate: true,
+      showBadge: true,
+      enableLights: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
+    });
+  }
+}
+
+// Call this on app initialization
+setupNotificationChannel();
+
 const PUSH_TOKEN_KEY = "expo_push_token";
 const TOKEN_TIMESTAMP_KEY = "push_token_timestamp";
-const TOKEN_EXPIRY_DAYS = 30; // Check token every 30 days
+const TOKEN_EXPIRY_DAYS = 30;
 
 /**
  * Check if stored push token is expired or needs refresh
@@ -80,6 +102,9 @@ export async function registerForPushToken(
   }
 
   try {
+    // Setup notification channel first
+    await setupNotificationChannel();
+
     // Check if we need to refresh the token
     if (!forceRefresh) {
       const storedToken = await getStoredPushToken();
@@ -106,7 +131,7 @@ export async function registerForPushToken(
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: "your-expo-project-id", // Replace with your Expo project ID
+      projectId: "ff6ed863-bfd2-4c47-ac5b-ff8d37baff13",
     });
     const newToken = tokenData.data;
 
@@ -123,7 +148,7 @@ export async function registerForPushToken(
           method: "POST",
           body: JSON.stringify({
             pushToken: newToken,
-            oldToken: storedToken, // Send old token for backend cleanup
+            oldToken: storedToken,
             deviceInfo: {
               platform: Platform.OS,
               model: Device.modelName,
@@ -180,6 +205,31 @@ export async function sendLocalMealNotification(
         mealType,
       },
       sound: true,
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      vibrate: [0, 250, 250, 250],
+    },
+    trigger: null,
+    identifier: `meal-${Date.now()}`,
+  });
+}
+
+/**
+ * Send high-priority heads-up notification
+ */
+export async function sendHeadsUpNotification(
+  title: string,
+  body: string,
+  data?: any
+) {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data: data || {},
+      sound: true,
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      vibrate: [0, 250, 250, 250],
+      categoryIdentifier: "meal-alerts",
     },
     trigger: null,
   });
