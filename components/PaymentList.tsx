@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -18,27 +17,49 @@ import { formatDate } from '../lib/utils/dateFormatter'
 import PriceInput from './ui/PriceInput'
 import { formatAmount } from '../lib/utils/amountFormatter'
 
+const MONTHS = [
+  { label: 'January', value: 'January' },
+  { label: 'February', value: 'February' },
+  { label: 'March', value: 'March' },
+  { label: 'April', value: 'April' },
+  { label: 'May', value: 'May' },
+  { label: 'June', value: 'June' },
+  { label: 'July', value: 'July' },
+  { label: 'August', value: 'August' },
+  { label: 'September', value: 'September' },
+  { label: 'October', value: 'October' },
+  { label: 'November', value: 'November' },
+  { label: 'December', value: 'December' },
+]
+
 interface PaymentsListProps {}
 
 export function PaymentsList({}: PaymentsListProps) {
   const [consumer, setConsumer] = useState('')
   const [consumers, setConsumers] = useState([])
   const [consumerLoading, setConsumerLoading] = useState(true)
+  const [month, setMonth] = useState(MONTHS[new Date().getMonth()].value)
   const [date, setDate] = useState(new Date().toISOString())
   const [datePickerShow, setDatePickerShow] = useState(false)
   const [price, setPrice] = useState(0)
   const [loading, setLoading] = useState(false)
   const [payments, setPayments] = useState([])
   const [paymentsLoading, setPaymentsLoading] = useState(false)
-  const [monthlyBill, setMonthlyBill] = useState(null)
-  const [showMonthlyBill, setShowMonthlyBill] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [pendingAmount, setPendingAmount] = useState<number | null>(null)
+  const [pendingLoading, setPendingLoading] = useState(false)
 
   useEffect(() => {
     fetchConsumers()
     fetchPayments()
   }, [])
+
+  useEffect(() => {
+    if (consumer && month) {
+      fetchPendingAmount()
+    } else {
+      setPendingAmount(null)
+    }
+  }, [consumer, month])
 
   const fetchConsumers = async () => {
     try {
@@ -55,19 +76,59 @@ export function PaymentsList({}: PaymentsListProps) {
     }
   }
 
+  const fetchPendingAmount = async () => {
+    setPendingLoading(true)
+    try {
+      // Check if the selected month is the current month
+      const currentMonth = MONTHS[new Date().getMonth()].value
+
+      // Only fetch pending amount for completed months (not current month)
+      if (month === currentMonth) {
+        setPendingAmount(null)
+        setPrice(0)
+        setPendingLoading(false)
+        return
+      }
+
+      const res = await authFetch(
+        `/reports/seller/monthly-stats?month=${month}&consumerId=${consumer}`,
+        {
+          method: 'GET',
+        },
+      )
+      if (res?.pendingAmount !== undefined) {
+        setPendingAmount(res.pendingAmount)
+        // Prefill the amount with pending amount
+        if (res.pendingAmount > 0) {
+          setPrice(res.pendingAmount)
+        } else {
+          setPrice(0) // Reset to 0 if settled
+        }
+      } else {
+        setPendingAmount(null)
+        setPrice(0)
+      }
+    } catch (e: any) {
+      setPendingAmount(null)
+      setPrice(0)
+    } finally {
+      setPendingLoading(false)
+    }
+  }
+
   const handleSubmit = async () => {
     setLoading(true)
     if (!consumer || !price) {
       Alert.alert('Error', 'Please fill in all fields')
+      setLoading(false)
       return
     }
 
     if (isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Please enter a valid amount')
+      setLoading(false)
       return
     }
-
-    setLoading(false)
 
     try {
       const res = await authFetch('/payments', {
@@ -81,17 +142,14 @@ export function PaymentsList({}: PaymentsListProps) {
       if (res) {
         fetchPayments()
         Alert.alert('Success', 'Payment recorded successfully!')
+        setPrice(0)
+        setDate(new Date().toISOString())
       }
     } catch (e: any) {
       alert(e.message)
     } finally {
-      setConsumerLoading(false)
       setLoading(false)
     }
-
-    setConsumer('')
-    setPrice(0)
-    setDate(new Date().toISOString())
   }
 
   const fetchPayments = async () => {
@@ -108,84 +166,25 @@ export function PaymentsList({}: PaymentsListProps) {
     }
   }
 
-  const fetchMonthlyBill = async () => {
-    if (!consumer) {
-      Alert.alert('Error', 'Please select a consumer first')
-      return
-    }
-
-    try {
-      console.log(
-        'endpoint=====',
-        `/payments/monthly-bill/${consumer}?month=${selectedMonth}&year=${selectedYear}`,
-      )
-      const res = await authFetch(
-        `/payments/monthly-bill/${consumer}?month=${selectedMonth}&year=${selectedYear}`,
-        { method: 'GET' },
-      )
-      setMonthlyBill(res)
-      setShowMonthlyBill(true)
-    } catch (e: any) {
-      alert(e.message)
-    }
-  }
-
-  const payFullMonth = async () => {
-    if (!monthlyBill || monthlyBill.balance <= 0) {
-      Alert.alert('Info', 'No balance to pay for this month')
-      return
-    }
-
-    setPrice(monthlyBill.balance)
-    setDate(new Date().toISOString())
-    setShowMonthlyBill(false)
-
-    Alert.alert(
-      'Pay Full Month',
-      `Pay ₹${monthlyBill.balance.toFixed(2)} for ${getMonthName(
-        selectedMonth,
-      )} ${selectedYear}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setLoading(true)
-            try {
-              await authFetch('/payments', {
-                method: 'POST',
-                body: JSON.stringify({
-                  consumer_id: consumer,
-                  date: new Date().toISOString(),
-                  amount: monthlyBill.balance,
-                  note: `Payment for ${getMonthName(
-                    selectedMonth,
-                  )} ${selectedYear}`,
-                }),
-              })
-              Alert.alert('Success', 'Monthly payment recorded!')
-              fetchPayments()
-              setPrice(0)
-            } catch (e: any) {
-              alert(e.message)
-            } finally {
-              setLoading(false)
-            }
-          },
-        },
-      ],
-    )
-  }
-
-  const getMonthName = (month: number) => {
-    return new Date(2000, month - 1).toLocaleString('default', {
-      month: 'long',
-    })
-  }
-
   const isDisabled = useMemo(() => {
-    return !consumer || !price || !date || loading || consumerLoading
-  }, [price, date, consumer])
+    // Disable if basic fields are missing or loading
+    if (!consumer || !price || !date || loading || consumerLoading) {
+      return true
+    }
+
+    // Check if current month is selected
+    const currentMonth = MONTHS[new Date().getMonth()].value
+    if (month === currentMonth) {
+      return true // Disable for current month
+    }
+
+    // Disable if no pending amount (month is settled)
+    if (pendingAmount === 0 || pendingAmount === null) {
+      return true
+    }
+
+    return false
+  }, [price, date, consumer, loading, consumerLoading, month, pendingAmount])
 
   return (
     <ScrollView
@@ -206,7 +205,7 @@ export function PaymentsList({}: PaymentsListProps) {
           <Text style={styles.subtitle}>Record and track payments</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { zIndex: 3000 }]}>
           <Text style={styles.cardTitle}>Record Payment</Text>
 
           <View style={styles.inputGroup}>
@@ -216,7 +215,39 @@ export function PaymentsList({}: PaymentsListProps) {
               value={consumer}
               onChange={setConsumer}
               placeholder="Select consumer"
+              zIndex={3000}
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Month</Text>
+            <Dropdown
+              items={MONTHS}
+              value={month}
+              onChange={setMonth}
+              placeholder="Select month"
+              zIndex={2000}
+            />
+            {pendingLoading ? (
+              <ActivityIndicator
+                size="small"
+                color="#22c55e"
+                style={{ marginTop: 8 }}
+              />
+            ) : pendingAmount !== null && pendingAmount > 0 ? (
+              <View style={styles.pendingAmountContainer}>
+                <Text style={styles.pendingAmountLabel}>Pending amount:</Text>
+                <Text style={styles.pendingAmountValue}>
+                  {formatAmount(pendingAmount)}
+                </Text>
+              </View>
+            ) : pendingAmount === 0 ? (
+              <View style={styles.pendingAmountContainer}>
+                <Text style={styles.settledText}>
+                  ✓ All settled for this month
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <PriceInput
@@ -250,150 +281,46 @@ export function PaymentsList({}: PaymentsListProps) {
           </View>
 
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, isDisabled && styles.buttonDisabled]}
             onPress={handleSubmit}
             activeOpacity={0.8}
             disabled={isDisabled}
           >
-            {(consumerLoading || loading) && (
-              <ActivityIndicator style={{ marginRight: 5 }} />
+            {loading && (
+              <ActivityIndicator style={{ marginRight: 5 }} color="#fff" />
             )}
             <Text style={styles.buttonText}>✓ Mark as Paid</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Monthly Bill</Text>
-          <Text style={styles.cardSubtitle}>View and pay monthly balance</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Consumer</Text>
-            <Dropdown
-              items={consumers}
-              value={consumer}
-              onChange={setConsumer}
-              placeholder="Select consumer"
-            />
-          </View>
-
-          <View style={styles.monthYearRow}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Month</Text>
-              <Dropdown
-                items={[
-                  { label: 'January', value: 1 },
-                  { label: 'February', value: 2 },
-                  { label: 'March', value: 3 },
-                  { label: 'April', value: 4 },
-                  { label: 'May', value: 5 },
-                  { label: 'June', value: 6 },
-                  { label: 'July', value: 7 },
-                  { label: 'August', value: 8 },
-                  { label: 'September', value: 9 },
-                  { label: 'October', value: 10 },
-                  { label: 'November', value: 11 },
-                  { label: 'December', value: 12 },
-                ]}
-                value={selectedMonth}
-                onChange={setSelectedMonth}
-                placeholder="Month"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Year</Text>
-              <Dropdown
-                items={[
-                  { label: '2024', value: 2024 },
-                  { label: '2025', value: 2025 },
-                  { label: '2026', value: 2026 },
-                ]}
-                value={selectedYear}
-                onChange={setSelectedYear}
-                placeholder="Year"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#3b82f6' }]}
-            onPress={fetchMonthlyBill}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>📊 View Monthly Bill</Text>
-          </TouchableOpacity>
-
-          {showMonthlyBill && monthlyBill && (
-            <View style={styles.billDetails}>
-              <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Total Due:</Text>
-                <Text style={[styles.billValue, { color: '#22c55e' }]}>
-                  {formatAmount(monthlyBill.totalDue)}
-                </Text>
-              </View>
-              <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Already Paid:</Text>
-                <Text style={[styles.billValue, { color: '#3b82f6' }]}>
-                  {formatAmount(monthlyBill.totalPaid)}
-                </Text>
-              </View>
-              <View style={[styles.billRow, styles.billRowBalance]}>
-                <Text style={styles.billLabelBold}>Balance:</Text>
-                <Text style={[styles.billValueBold, { color: '#f97316' }]}>
-                  {formatAmount(monthlyBill.balance)}
-                </Text>
-              </View>
-
-              {monthlyBill.balance > 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    { backgroundColor: '#22c55e', marginTop: 12 },
-                  ]}
-                  onPress={payFullMonth}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.buttonText}>💳 Pay Full Month</Text>
-                </TouchableOpacity>
-              )}
+        <View style={[styles.card, { zIndex: 1 }]}>
+          <Text style={styles.cardTitle}>Payment History</Text>
+          {paymentsLoading ? (
+            <ActivityIndicator size={'large'} color="#22c55e" />
+          ) : payments?.length === 0 ? (
+            <Text style={styles.emptyText}>No payments recorded yet</Text>
+          ) : (
+            <View style={styles.list}>
+              {payments?.map((payment) => (
+                <View key={payment.id} style={styles.paymentItem}>
+                  <View style={styles.paymentIcon}>
+                    <Text style={styles.iconText}>💵</Text>
+                  </View>
+                  <View style={styles.paymentInfo}>
+                    <Text style={styles.paymentName}>
+                      {payment?.Consumer?.name || ''}
+                    </Text>
+                    <Text style={styles.paymentDate}>
+                      {formatDate(payment.date)}
+                    </Text>
+                  </View>
+                  <Text style={styles.paymentAmount}>
+                    {formatAmount(payment.amount)}
+                  </Text>
+                </View>
+              ))}
             </View>
           )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Payment History</Text>
-          <>
-            {paymentsLoading ? (
-              <ActivityIndicator size={'large'} />
-            ) : (
-              <>
-                {payments?.length === 0 ? (
-                  <Text style={styles.emptyText}>No payments recorded yet</Text>
-                ) : (
-                  <View style={styles.list}>
-                    {payments?.map((payment) => (
-                      <View key={payment.id} style={styles.paymentItem}>
-                        <View style={styles.paymentIcon}>
-                          <Text style={styles.iconText}>💵</Text>
-                        </View>
-                        <View style={styles.paymentInfo}>
-                          <Text style={styles.paymentName}>
-                            {payment?.Consumer?.name || ''}
-                          </Text>
-                          <Text style={styles.paymentDate}>
-                            {formatDate(payment.date)}
-                          </Text>
-                        </View>
-                        <Text style={styles.paymentAmount}>
-                          {formatAmount(payment.amount)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-          </>
         </View>
       </View>
     </ScrollView>
@@ -474,6 +401,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
+  buttonDisabled: {
+    backgroundColor: '#9ca3af',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+  },
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
@@ -543,52 +475,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
   },
-  cardSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748b',
-    marginTop: -12,
-    marginBottom: 16,
-  },
-  monthYearRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  billDetails: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#f8fdf9',
-    borderRadius: 12,
+  pendingAmountContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#fff7ed',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  billRow: {
+    borderColor: 'rgba(249, 115, 22, 0.2)',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  billRowBalance: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  billLabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
+  pendingAmountLabel: {
+    fontSize: 13,
+    fontFamily: 'Poppins-Medium',
     color: '#64748b',
   },
-  billLabelBold: {
+  pendingAmountValue: {
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1a1a1a',
-  },
-  billValue: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-  },
-  billValueBold: {
-    fontSize: 18,
     fontFamily: 'Poppins-Bold',
+    color: '#f97316',
+  },
+  settledText: {
+    fontSize: 13,
+    fontFamily: 'Poppins-Medium',
+    color: '#22c55e',
   },
 })

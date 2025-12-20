@@ -1,19 +1,19 @@
 // src/components/Dropdown.js
-import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import DropDownPicker from "react-native-dropdown-picker";
+import React, { useState } from 'react'
+import { StyleSheet, View } from 'react-native'
+import DropDownPicker from 'react-native-dropdown-picker'
 
 export default function Dropdown({
   items = [],
-  placeholder = "Select an option",
+  placeholder = 'Select an option',
   value,
   onChange,
   containerStyle = null,
   style = null,
   dropDownContainerStyle = null,
-  zIndex = 1000,
+  zIndex = 10000,
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   return (
     <View style={[styles.container, containerStyle, { zIndex }]}>
@@ -38,50 +38,50 @@ export default function Dropdown({
         maxHeight={500}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
+    width: '100%',
   },
   dropdown: {
     minHeight: 48,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 5,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.2)",
+    borderColor: 'rgba(34, 197, 94, 0.2)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    fontFamily: "Poppins-Regular",
-    color: "#1a1a1a",
+    fontFamily: 'Poppins-Regular',
+    color: '#1a1a1a',
   },
   dropdownContainer: {
-    borderColor: "rgba(34, 197, 94, 0.2)",
+    borderColor: 'rgba(34, 197, 94, 0.2)',
     borderRadius: 12,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
   text: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#333",
+    fontWeight: '500',
+    color: '#333',
   },
   label: {
-    color: "#333",
-    fontWeight: "500",
+    color: '#333',
+    fontWeight: '500',
   },
   arrowIcon: {
-    tintColor: "#888",
+    tintColor: '#888',
   },
   tickIcon: {
-    tintColor: "#2196f3",
+    tintColor: '#2196f3',
   },
-});
+})

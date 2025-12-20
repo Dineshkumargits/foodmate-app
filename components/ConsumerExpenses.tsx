@@ -324,6 +324,44 @@ export function ConsumerExpensesHelper({
   const avgPerMeal =
     monthlyItems.length > 0 ? monthlySpent / monthlyItems.length : 0
 
+  const currentMonthCard =
+    monthlySpent > 0 ? (
+      <View style={[styles.card, styles.currentMonthCard]}>
+        <View style={styles.currentMonthHeader}>
+          <View>
+            <Text style={styles.currentMonthTitle}>Current Month</Text>
+            <Text style={styles.currentMonthSubtitle}>
+              {new Date().toLocaleString('default', {
+                month: 'long',
+                year: 'numeric',
+              })}{' '}
+              • Not yet billed
+            </Text>
+          </View>
+          <Text style={styles.currentMonthBadge}>In Progress</Text>
+        </View>
+
+        <View style={styles.currentMonthAmount}>
+          <Text style={styles.currentMonthAmountLabel}>Running Total</Text>
+          <Text style={styles.currentMonthAmountValue}>
+            {formatAmount(monthlySpent)}
+          </Text>
+          <Text style={styles.currentMonthAmountNote}>
+            {monthlyItems.length} meal{monthlyItems.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        <View style={styles.currentMonthStats}>
+          <View style={styles.currentMonthStatItem}>
+            <Text style={styles.currentMonthStatLabel}>Avg per meal</Text>
+            <Text style={styles.currentMonthStatValue}>
+              {formatAmount(avgPerMeal)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    ) : null
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
@@ -331,6 +369,8 @@ export function ConsumerExpensesHelper({
           <Text style={styles.title}>My Expenses</Text>
           <Text style={styles.subtitle}>Completed monthly billing cycles</Text>
         </View>
+
+        {pendingBalance <= 0 && currentMonthCard}
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
@@ -450,42 +490,7 @@ export function ConsumerExpensesHelper({
           </View>
         )}
 
-        {monthlySpent > 0 && (
-          <View style={[styles.card, styles.currentMonthCard]}>
-            <View style={styles.currentMonthHeader}>
-              <View>
-                <Text style={styles.currentMonthTitle}>Current Month</Text>
-                <Text style={styles.currentMonthSubtitle}>
-                  {new Date().toLocaleString('default', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}{' '}
-                  • Not yet billed
-                </Text>
-              </View>
-              <Text style={styles.currentMonthBadge}>In Progress</Text>
-            </View>
-
-            <View style={styles.currentMonthAmount}>
-              <Text style={styles.currentMonthAmountLabel}>Running Total</Text>
-              <Text style={styles.currentMonthAmountValue}>
-                {formatAmount(monthlySpent)}
-              </Text>
-              <Text style={styles.currentMonthAmountNote}>
-                {monthlyItems.length} meal{monthlyItems.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-
-            <View style={styles.currentMonthStats}>
-              <View style={styles.currentMonthStatItem}>
-                <Text style={styles.currentMonthStatLabel}>Avg per meal</Text>
-                <Text style={styles.currentMonthStatValue}>
-                  {formatAmount(avgPerMeal)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+        {pendingBalance > 0 && currentMonthCard}
       </View>
     </ScrollView>
   )

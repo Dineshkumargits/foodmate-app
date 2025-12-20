@@ -4,17 +4,25 @@ const BASE =
   Constants.expoConfig?.extra?.apiUrl ||
   'https://adkcrackers.com/foodmate/api/v1' // change to server IP on device
 
-async function authFetch(path: string, opts: RequestInit = {}) {
+async function authFetch(
+  path: string,
+  opts: RequestInit & { returnBlob?: boolean } = {},
+) {
+  const { returnBlob, ...fetchOpts } = opts
   const token = await AsyncStorage.getItem('token')
   const headers: any = {
     'Content-Type': 'application/json',
-    ...(opts.headers || {}),
+    ...(fetchOpts.headers || {}),
   }
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(`${BASE}${path}`, { ...opts, headers })
+  const res = await fetch(`${BASE}${path}`, { ...fetchOpts, headers })
   if (!res.ok) {
     const text = await res.text()
     throw new Error(text || 'network error')
+  }
+  // Return raw response for blob data (e.g., PDF files)
+  if (returnBlob) {
+    return res
   }
   return res.json()
 }
