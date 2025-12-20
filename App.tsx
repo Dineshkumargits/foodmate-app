@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useRef } from "react";
-import { StatusBar, Platform, LogBox, AppState } from "react-native";
+import { StatusBar, Platform, LogBox, AppState, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
@@ -14,6 +14,8 @@ import { ConsumerProfile } from "./components/ConsumerProfile";
 import { BottomNav } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { ConsumersList } from "./components/ConsumersList";
+import { SnowFall } from "./components/SnowFall";
+import { isChristmasTime } from "./lib/theme";
 import {
   registerForPushToken,
   setupNotificationListeners,
@@ -276,11 +278,13 @@ export default function App() {
           {state.user == null ? (
             <>
               <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
+              {isChristmasTime() && <SnowFall />}
               <LoginScreen />
             </>
           ) : (
             <>
               <StatusBar barStyle="dark-content" backgroundColor={bgColor} />
+              {isChristmasTime() && <SnowFall />}
               <Header />
               {renderContent()}
               <BottomNav

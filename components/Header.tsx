@@ -2,6 +2,8 @@ import React, { useContext } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { AuthContext } from "../App";
 
+import { isChristmasTime } from "../lib/theme";
+
 interface HeaderProps {}
 
 export function Header({}: HeaderProps) {
@@ -10,10 +12,13 @@ export function Header({}: HeaderProps) {
   const handleLogout = () => {
     auth.signOut();
   };
+
+  const logoEmoji = isChristmasTime() ? "🎅" : "🍽️";
+
   return (
     <View style={styles.container}>
       <View>
-        <Text style={styles.title}>🍽️ FoodMate</Text>
+        <Text style={styles.title}>{logoEmoji} FoodMate</Text>
         <Text style={styles.subtitle}>
           {auth.user.role === "seller" ? "Seller Dashboard" : "Consumer View"}
         </Text>

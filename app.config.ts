@@ -1,5 +1,16 @@
 import 'dotenv/config' // allows use of .env
 
+const isChristmasTime = () => {
+  const now = new Date()
+  const month = now.getMonth()
+  const day = now.getDate()
+  return month === 11 || (month === 0 && day <= 5)
+}
+
+const iconPath = isChristmasTime()
+  ? './assets/icon-christmas.png'
+  : './assets/icon.png'
+
 export default {
   expo: {
     name: 'Foodmate',
@@ -9,7 +20,7 @@ export default {
       [
         'expo-notifications',
         {
-          icon: './assets/icon.png',
+          icon: iconPath,
           color: '#ffffff',
           mode: 'production',
         },
@@ -26,7 +37,7 @@ export default {
       package: 'com.cindy.foodmate',
       usesCleartextTraffic: true,
       adaptiveIcon: {
-        foregroundImage: './assets/icon.png',
+        foregroundImage: iconPath,
         backgroundColor: '#FFFFFF',
       },
       useNextNotificationsApi: true,
